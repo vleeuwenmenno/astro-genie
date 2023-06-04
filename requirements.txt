@@ -1,0 +1,6 @@
+pillow
+numpy
+tk
+astropy
+minimize
+shutil
