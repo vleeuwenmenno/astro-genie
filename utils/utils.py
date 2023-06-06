@@ -54,6 +54,9 @@ def calculateExposureTimes(dates:list, object_path:str):
                         for name in os.listdir(lights_folder_path)
                         if os.path.isfile(os.path.join(lights_folder_path, name))
                     ]
+                    # Include the full path
+                    light_files = [os.path.join(lights_folder_path, name) for name in light_files]
+                    light_frames.extend(light_files)
                     total_lights += len(light_files)
                     light_frames.extend(light_files)
 
