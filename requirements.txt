@@ -4,3 +4,4 @@ tk
 astropy
 minimize
 shutil
+rawpy

@@ -103,8 +103,27 @@ class LightFramesInspectWindow(Tk):
 
         self.imageName.set(selectedImage)
         if os.path.isfile(image_path):
-            with fits.open(image_path) as hdul:
-                image_data = hdul[0].data
+
+            # If the image is a .fit file, open it and extract the image data
+            if image_path.endswith(".fit") or image_path.endswith(".fits"):
+                with fits.open(image_path) as hdul:
+                    image_data = hdul[0].data
+
+            # If the image is CR2 or CR3 (Canon RAW), open it and extract the image data
+            elif image_path.endswith(".cr2") or image_path.endswith(".cr3") or image_path.endswith(".CR2") or image_path.endswith(".CR3"):
+                import rawpy
+                raw = rawpy.imread(image_path)
+                bayer = raw.raw_image
+                image_data = np.array(bayer)
+
+            # If the image is a .jpg or .png file, open it and extract the image data
+            elif image_path.endswith(".jpg") or image_path.endswith(".png") or image_path.endswith(".JPG") or image_path.endswith(".PNG"):
+                image_data = np.array(Image.open(image_path))
+
+            # If the image is none of the above, print an error message and return
+            else:
+                print("Error: Unsupported file format!")
+                return
 
             # Normalize the image data
             image_data = (image_data - np.min(image_data)) / (np.max(image_data) - np.min(image_data))
@@ -132,7 +151,7 @@ class LightFramesInspectWindow(Tk):
             else:
                 self.currentImageIsBad.set(0)
 
-    def previous_image(self, event):
+    def prevImage(self, event):
         index = self.lightFrames.curselection()[0] if self.lightFrames.curselection() != () else 0
         if index == 0:
             self.lightFrames.selection_set(self.lightFrames.size() - 1)
@@ -141,7 +160,7 @@ class LightFramesInspectWindow(Tk):
             self.lightFrames.selection_set(index - 1)
         self.showImagePreview(self)
         
-    def next_image(self, event):
+    def nextImage(self, event):
         index = self.lightFrames.curselection()[0] if self.lightFrames.curselection() != () else 0
         if index == self.lightFrames.size() - 1:
             self.lightFrames.selection_set(0)
@@ -172,8 +191,8 @@ class LightFramesInspectWindow(Tk):
         self.canvas.bind("<MouseWheel>", self.mouseWheelEvent)
 
         # Arrow keys for previous/next image
-        self.bind("<Left>", self.previous_image)
-        self.bind("<Right>", self.next_image)
+        self.bind("<Left>", self.prevImage)
+        self.bind("<Right>", self.nextImage)
 
     def mouse_down_left(self, event):
         self.__old_event = event
