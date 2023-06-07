@@ -8,16 +8,15 @@ class SettingsWindow(Tk):
     def __init__(self):
         super().__init__()
 
-        # Window can spawn at the center of the screen
-        self.eval('tk::PlaceWindow . center')
-
         self.title("AstroGenie - Settings")
         self.geometry("920x200")
         self.iconbitmap("assets/icon.ico") # type: ignore
+        self.attributes("-topmost", True)
         
         self.settings = Settings()
         self.settings.loadJson()
 
+        # Dark sorcery is causing this to not update yet the settings are saved if we listen for the events
         self.dateFormat = tk.StringVar(self)
         self.badImagePrefix = tk.StringVar(self)
         self.defaultImageFolder = tk.StringVar(self)
@@ -29,7 +28,6 @@ class SettingsWindow(Tk):
         self.updateDefaultImageFolderOnLoad.set(self.settings.updateDefaultImageFolderOnLoad)
         
         self.defineSettingsWidgets()
-
 
     def defineSettingsWidgets(self):
         self.defineSettingsFrame()
@@ -58,6 +56,9 @@ class SettingsWindow(Tk):
         self.dateFormatEntry = tk.Entry(self.settingsFrame, textvariable=self.dateFormat, width=50)
         self.dateFormatEntry.grid(row=0, column=1)
 
+        self.dateFormatEntryHelpBtn = tk.Button(self.settingsFrame, text="?", command=lambda: tk.messagebox.showinfo("Date Format", "The date format is used to parse the date from the image folders. The default is %Y-%m-%d. For more examples, see https://strftime.org/."))
+        self.dateFormatEntryHelpBtn.grid(row=0, column=2, padx=5)
+
         self.badImagePrefixEntry = tk.Entry(self.settingsFrame, textvariable=self.badImagePrefix, width=50)
         self.badImagePrefixEntry.grid(row=1, column=1)
 
@@ -67,8 +68,12 @@ class SettingsWindow(Tk):
         self.updateDefaultImageFolderOnLoadCheckbutton = tk.Checkbutton(self.settingsFrame, variable=self.updateDefaultImageFolderOnLoad)
         self.updateDefaultImageFolderOnLoadCheckbutton.grid(row=3, column=1)
 
-        # Add hover tooltip to date format entry to explain how to format the date
-
+        # Checkbox event listener to write new value to settings class
+        self.updateDefaultImageFolderOnLoadCheckbutton.bind("<Button-1>", self.onCheckboxClick)
+                                                            
+    def onCheckboxClick(self, event):
+         # Dark sorcery is causing this to be negative instead of positive so we need to invert it
+         self.settings.updateDefaultImageFolderOnLoad = not self.updateDefaultImageFolderOnLoad.get()
 
     def defineSettingsButtons(self):
         # Browse button for default image folder

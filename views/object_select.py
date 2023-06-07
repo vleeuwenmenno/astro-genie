@@ -44,8 +44,11 @@ class ObjectSelectWindow(Tk):
         self.tryLoadFolderHistory()
 
     def openSettingsWindow(self):
+        # Open the settings window and wait for it to close before continuing
         import views.settings as settings
         settings.SettingsWindow()
+
+        pass
 
 
     def proceedBtnClick(self):

@@ -1,20 +1,22 @@
-import math
 import os
 from tkinter import  Tk
 from utils.settings import Settings
 from utils.utils import calculateExposureTimes, formatExposureTime
 from widgets.status_bar import StatusBar
 
+import views.fits_details as fits_details
 import tkinter as tk
 import numpy as np
 
-from PIL import ImageTk, Image, ImageEnhance
+from PIL import ImageTk, Image
 from astropy.io import fits
 
 class LightFramesInspectWindow(Tk):
     def __init__(self, objectPath:str, selectedObject:str, selectedDates:list):
         super().__init__()
         self.settings = Settings()
+        self.detailsWindow = None
+        self.showFitDetailChk = tk.IntVar()
 
         self.objectPath = objectPath
         self.selectedDates = selectedDates
@@ -44,46 +46,11 @@ class LightFramesInspectWindow(Tk):
     def proceedBtnClick(self):
         pass
 
-    def markCurrentImage(self):
-        selectedImage = len(self.lightFrames.curselection()) > 0 and self.lightFrames.get(self.lightFrames.curselection()[0]) or ""
-        imagePath = ""
-
-        for lightFrame in self.lightFramePaths:
-            if selectedImage in lightFrame:
-                imagePath = os.path.dirname(lightFrame)
-                break
-
-        if imagePath == "" or selectedImage == "":
-            print("Error: Image and/or path not found!")
-            return
-
-        if self.currentImageIsBad.get() == 1:
-            # If selectedImage doesn't start with badImagePrefix add it
-            if not selectedImage.startswith(self.settings.badImagePrefix):
-                print(f"Marking {selectedImage} as bad. {os.path.join(imagePath, selectedImage)} -> {os.path.join(imagePath, f'{self.settings.badImagePrefix}{selectedImage}')}")
-                os.rename(os.path.join(imagePath, selectedImage), os.path.join(imagePath, f"{self.settings.badImagePrefix}{selectedImage}"))
-        else:
-            # If selectedImage starts with badImagePrefix remove it
-            if selectedImage.startswith(self.settings.badImagePrefix):
-                print(f"Marking {selectedImage} as good. {os.path.join(imagePath, selectedImage)} -> {os.path.join(imagePath, selectedImage[4:])}")
-                os.rename(os.path.join(imagePath, selectedImage), os.path.join(imagePath, selectedImage[4:]))
-
-        # Clear and reload light frames and select the previously selected image again
-        self.lightFrames.delete(0, tk.END)
-
-        totalLights, totalExposureTime, self.lightFramePaths = calculateExposureTimes(self.selectedDates, self.objectPath)
-        for lightFrame in self.lightFramePaths:
-            self.lightFrames.insert(tk.END, os.path.basename(lightFrame))
-
-        for i in range(self.lightFrames.size()):
-            if selectedImage in self.lightFrames.get(i):
-                self.lightFrames.selection_set(i)
-                break
-
-        self.showImagePreview(self)
-        pass
-
     def selectDifferentDatesBtnClick(self):
+        if self.detailsWindow != None:
+            self.detailsWindow.destroy()
+            self.detailsWindow = None
+
         self.destroy()
 
         # Split object path into path and object name
@@ -111,6 +78,10 @@ class LightFramesInspectWindow(Tk):
             if image_path.endswith(".fit") or image_path.endswith(".fits"):
                 with fits.open(image_path) as hdul:
                     image_data = hdul[0].data
+
+                if self.detailsWindow != None:
+                    self.detailsWindow.fitsHeader = hdul[0].header
+                    self.detailsWindow.refresh()
 
             # If the image is CR2 or CR3 (Canon RAW), open it and extract the image data
             elif image_path.endswith(".cr2") or image_path.endswith(".cr3") or image_path.endswith(".CR2") or image_path.endswith(".CR3"):
@@ -328,57 +299,57 @@ class LightFramesInspectWindow(Tk):
         self.image = im
 
     def imageContainer(self):
-        # Create a frame for the image preview
-        self.image_frame = tk.Frame(self)
-        button_frame = tk.Frame(self.image_frame)
-        button_frame.pack(side=tk.BOTTOM, pady=10)
-
-        marker_checkbox = tk.Checkbutton(button_frame, text="Image is marked as bad", variable=self.currentImageIsBad, command=self.markCurrentImage)
-        marker_checkbox.pack(side=tk.LEFT, padx=5)
-
-        autostretchChk = tk.Checkbutton(button_frame, text="Autostretch", variable=self.autostretchImage, command=lambda: self.showImagePreview(self))
-        autostretchChk.select()
-        autostretchChk.pack(side=tk.LEFT, padx=5)
-
-        openFrameInFolderBtn = tk.Button(button_frame, text="Open in folder", command=self.openFrameInFolderBtnClick)
-        openFrameInFolderBtn.pack(side=tk.LEFT, padx=5)
-        
+        self.image_frame = tk.Frame(self)        
         self.image_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         pass
 
-    def openFrameInFolderBtnClick(self):
-        # If MacOS open the folder in Finder
-        if os.name == "posix":
-            os.system(f"open {os.path.dirname(self.lightFramePaths[0])}") if len(self.lightFramePaths) > 0 else None
-
-        # If Windows open the folder in Explorer
-        elif os.name == "nt":
-            os.startfile(os.path.dirname(self.lightFramePaths[0])) if len(self.lightFramePaths) > 0 else None
-
-        # Unix based OS
-        else:
-            os.system(f"xdg-open {os.path.dirname(self.lightFramePaths[0])}") if len(self.lightFramePaths) > 0 else None
-
     def topBar(self, window):
-        self = tk.Frame(self, bd=1, relief=tk.SUNKEN)
-        self.pack(side=tk.TOP, fill=tk.X)
-        
-        optionsFrame = tk.LabelFrame(self, text="Options")
-        optionsFrame.pack(fill=tk.X, padx=8, pady=8, expand=1, side=tk.TOP)
+        # Add top bar with file, edit, view, etc.
+        self.menuBar = tk.Menu(window)
+        self.fileMenu = tk.Menu(self.menuBar, tearoff=0)
+        self.fileMenu.add_command(label="Settings", command=self.settingsMenuClick)
+        self.fileMenu.add_command(label="Open object folder", command=lambda: os.startfile(self.objectPath))
+        self.fileMenu.add_command(label="Select different dates", command=self.selectDifferentDatesBtnClick)
+        self.fileMenu.add_command(label="Exit", command=self.destroy)
+        self.menuBar.add_cascade(label="File", menu=self.fileMenu)
 
-        selectDifferentDatesBtn = tk.Button(optionsFrame, text="Back", command=window.selectDifferentDatesBtnClick)
-        selectDifferentDatesBtn.pack(fill=tk.Y, padx=8, pady=8, expand=0, side=tk.LEFT)
+        self.processMenu = tk.Menu(self.menuBar, tearoff=0)
+        self.processMenu.add_command(label="Create process folder", command=self.proceedBtnClick)
+        self.processMenu.add_command(label="Calibration frames", command=self.proceedBtnClick)
+        self.menuBar.add_cascade(label="Process", menu=self.processMenu)
 
-        settingsMenu = tk.Button(optionsFrame, text="Settings", command=window.settingsMenuClick)
-        settingsMenu.pack(fill=tk.Y, padx=8, pady=8, expand=0, side=tk.LEFT)
+        self.viewMenu = tk.Menu(self.menuBar, tearoff=0)
+        self.viewMenu.add_checkbutton(label="Show image info (If available)", variable=self.showFitDetailChk, command=self.showFitDetails)
+        self.viewMenu.add_checkbutton(label="Auto-stretch image", variable=self.autostretchImage, command=lambda: self.showImagePreview(self))
+        self.menuBar.add_cascade(label="View", menu=self.viewMenu)
 
-        calibrationFramesBtn = tk.Button(optionsFrame, text="Select calibration frames", command=window.proceedBtnClick)
-        calibrationFramesBtn.pack(fill=tk.Y, padx=8, pady=8, expand=0, side=tk.LEFT)
+        self.helpMenu = tk.Menu(self.menuBar, tearoff=0)
+        self.helpMenu.add_command(label="About", command=lambda: tk.messagebox.showinfo("About", "AstroGenie is a tool for astrophotographers to help them sort and process their images."))
+        self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
 
-        proceedBtn = tk.Button(optionsFrame, text="Proceed", command=window.proceedBtnClick)
-        proceedBtn.pack(fill=tk.Y, padx=8, pady=8, expand=0, side=tk.RIGHT)
+        # Set default checkbutton values
+        self.autostretchImage.set(1)
+
+        self.config(menu=self.menuBar)
 
         pass
+
+    def showFitDetails(self):
+        # If we're supposed to show the FITs details, show them
+        if self.showFitDetailChk.get() == 1:
+            if self.detailsWindow != None:
+                self.detailsWindow.destroy()
+                self.detailsWindow = None
+
+            self.detailsWindow = fits_details.FitsDetailsWindow()
+            return
+        
+        # If we're not supposed to show the window check if it's open and close it if it is
+        if self.showFitDetailChk.get() == 0:
+            if self.detailsWindow != None:
+                self.detailsWindow.destroy()
+                self.detailsWindow = None
+            return
 
     def settingsMenuClick(self):
         import views.settings as settings
