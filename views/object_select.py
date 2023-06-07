@@ -15,17 +15,33 @@ class ObjectSelectWindow(Tk):
         self.eval('tk::PlaceWindow . center')
 
         self.title("AstroGenie - Select object")
-        self.geometry("400x400")
+        self.geometry("600x400")
         self.iconbitmap("assets/icon.ico") # type: ignore
 
 
         # Define widgets
         self.folderSelectWidget = FolderSelector(self, label="Select astrophotography folder", buttonLabel="Select folder", callback=self.setFolderCallback)
         self.objectList = ObjectSelector(self, self.folderSelectWidget.selectedPath, label="Select object", callback=lambda: self.proceedBtn.config(state=tk.NORMAL))
-        self.proceedBtn = ProceedButton(self, text="Proceed", command=self.proceedBtnClick, state=tk.DISABLED)
+
+        # Button group frame (Left, Right buttons)
+        self.buttonGroupFrame = tk.Frame(self)
+        self.buttonGroupFrame.pack(side=tk.BOTTOM, pady=10)
+
+        # Define buttons
+        self.settingsButton = tk.Button(self.buttonGroupFrame, text="Settings", command=self.openSettingsWindow)
+        self.proceedBtn = tk.Button(self.buttonGroupFrame, text="Proceed", command=self.proceedBtnClick, state=tk.DISABLED)
+
+        # Pack buttons
+        self.settingsButton.pack(side=tk.LEFT, pady=10)
+        self.proceedBtn.pack(side=tk.RIGHT, padx=10)
         
         # Let's try load the last used folder
         self.tryLoadFolderHistory()
+
+    def openSettingsWindow(self):
+        import views.settings as settings
+        settings.SettingsWindow()
+
 
     def proceedBtnClick(self):
         # Close this window and open the next one

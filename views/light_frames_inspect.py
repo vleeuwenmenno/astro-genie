@@ -1,6 +1,7 @@
 import math
 import os
 from tkinter import  Tk
+from utils.settings import Settings
 from utils.utils import calculateExposureTimes, formatExposureTime
 from widgets.status_bar import StatusBar
 
@@ -13,6 +14,8 @@ from astropy.io import fits
 class LightFramesInspectWindow(Tk):
     def __init__(self, objectPath:str, selectedObject:str, selectedDates:list):
         super().__init__()
+        self.settings = Settings()
+
         self.objectPath = objectPath
         self.selectedDates = selectedDates
         self.autostretchImage = tk.IntVar()
@@ -55,13 +58,13 @@ class LightFramesInspectWindow(Tk):
             return
 
         if self.currentImageIsBad.get() == 1:
-            # If selectedImage doesn't start with "BAD_" add it
-            if not selectedImage.startswith("BAD_"):
-                print(f"Marking {selectedImage} as bad. {os.path.join(imagePath, selectedImage)} -> {os.path.join(imagePath, 'BAD_' + selectedImage)}")
-                os.rename(os.path.join(imagePath, selectedImage), os.path.join(imagePath, f"BAD_{selectedImage}"))
+            # If selectedImage doesn't start with badImagePrefix add it
+            if not selectedImage.startswith(self.settings.badImagePrefix):
+                print(f"Marking {selectedImage} as bad. {os.path.join(imagePath, selectedImage)} -> {os.path.join(imagePath, f'{self.settings.badImagePrefix}{selectedImage}')}")
+                os.rename(os.path.join(imagePath, selectedImage), os.path.join(imagePath, f"{self.settings.badImagePrefix}{selectedImage}"))
         else:
-            # If selectedImage starts with "BAD_" remove it
-            if selectedImage.startswith("BAD_"):
+            # If selectedImage starts with badImagePrefix remove it
+            if selectedImage.startswith(self.settings.badImagePrefix):
                 print(f"Marking {selectedImage} as good. {os.path.join(imagePath, selectedImage)} -> {os.path.join(imagePath, selectedImage[4:])}")
                 os.rename(os.path.join(imagePath, selectedImage), os.path.join(imagePath, selectedImage[4:]))
 
@@ -146,7 +149,7 @@ class LightFramesInspectWindow(Tk):
             self.label_image_info["text"] = f"{self.imageName.get()} : {self.pil_image.width} x {self.pil_image.height} {self.pil_image.mode}"
 
             # Update image is bad checkbox based on file name suffix
-            if "BAD_" in image_path: # TODO: Make this a setting that can be changed in the settings window
+            if self.settings.badImagePrefix in image_path:
                 self.currentImageIsBad.set(1)
             else:
                 self.currentImageIsBad.set(0)
@@ -353,6 +356,9 @@ class LightFramesInspectWindow(Tk):
         selectDifferentDatesBtn = tk.Button(optionsFrame, text="Select different dates", command=window.selectDifferentDatesBtnClick)
         selectDifferentDatesBtn.pack(fill=tk.Y, padx=8, pady=8, expand=0, side=tk.LEFT)
 
+        settingsMenu = tk.Button(optionsFrame, text="Settings", command=window.settingsMenuClick)
+        settingsMenu.pack(fill=tk.Y, padx=8, pady=8, expand=0, side=tk.LEFT)
+
         calibrationFramesBtn = tk.Button(optionsFrame, text="Select calibration frames", command=window.proceedBtnClick)
         calibrationFramesBtn.pack(fill=tk.Y, padx=8, pady=8, expand=0, side=tk.LEFT)
 
@@ -360,6 +366,10 @@ class LightFramesInspectWindow(Tk):
         proceedBtn.pack(fill=tk.Y, padx=8, pady=8, expand=0, side=tk.RIGHT)
 
         pass
+
+    def settingsMenuClick(self):
+        import views.settings as settings
+        settings.SettingsWindow()
 
     def listLightFrames(self, lightFrames:list):
         self.lightFramesFrame = tk.LabelFrame(self, text="Light frames")
