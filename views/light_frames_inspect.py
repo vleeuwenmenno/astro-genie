@@ -16,13 +16,14 @@ class LightFramesInspectWindow(Tk):
         super().__init__()
         self.settings = Settings()
         self.detailsWindow = None
+        self.imageName = tk.StringVar()
         self.showFitDetailChk = tk.IntVar()
-
-        self.objectPath = objectPath
-        self.selectedDates = selectedDates
         self.autostretchImage = tk.IntVar()
         self.currentImageIsBad = tk.IntVar()
-        self.imageName = tk.StringVar()
+
+        self.selectedObject = selectedObject
+        self.objectPath = objectPath
+        self.selectedDates = selectedDates
         
         self.title("AstroGenie - Inspect light frames")
         self.geometry("1920x1080")
@@ -44,6 +45,13 @@ class LightFramesInspectWindow(Tk):
         self.showImagePreview(self)
 
     def proceedBtnClick(self):
+        if self.detailsWindow != None:
+            self.detailsWindow.destroy()
+            self.detailsWindow = None
+
+        self.destroy()
+        import views.create_process as create_process
+        create_process.CreateProcessWindow(self.selectedDates, self.objectPath, self.selectedObject)
         pass
 
     def selectDifferentDatesBtnClick(self):
