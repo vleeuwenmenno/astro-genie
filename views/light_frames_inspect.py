@@ -340,11 +340,24 @@ class LightFramesInspectWindow(Tk):
         autostretchChk.select()
         autostretchChk.pack(side=tk.LEFT, padx=5)
 
-        openFrameInFolderBtn = tk.Button(button_frame, text="Open in folder", command=lambda: os.startfile(os.path.dirname(self.lightFramePaths[0])) if len(self.lightFramePaths) > 0 else None)
+        openFrameInFolderBtn = tk.Button(button_frame, text="Open in folder", command=self.openFrameInFolderBtnClick)
         openFrameInFolderBtn.pack(side=tk.LEFT, padx=5)
         
         self.image_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         pass
+
+    def openFrameInFolderBtnClick(self):
+        # If MacOS open the folder in Finder
+        if os.name == "posix":
+            os.system(f"open {os.path.dirname(self.lightFramePaths[0])}") if len(self.lightFramePaths) > 0 else None
+
+        # If Windows open the folder in Explorer
+        elif os.name == "nt":
+            os.startfile(os.path.dirname(self.lightFramePaths[0])) if len(self.lightFramePaths) > 0 else None
+
+        # Unix based OS
+        else:
+            os.system(f"xdg-open {os.path.dirname(self.lightFramePaths[0])}") if len(self.lightFramePaths) > 0 else None
 
     def topBar(self, window):
         self = tk.Frame(self, bd=1, relief=tk.SUNKEN)
@@ -353,7 +366,7 @@ class LightFramesInspectWindow(Tk):
         optionsFrame = tk.LabelFrame(self, text="Options")
         optionsFrame.pack(fill=tk.X, padx=8, pady=8, expand=1, side=tk.TOP)
 
-        selectDifferentDatesBtn = tk.Button(optionsFrame, text="Select different dates", command=window.selectDifferentDatesBtnClick)
+        selectDifferentDatesBtn = tk.Button(optionsFrame, text="Back", command=window.selectDifferentDatesBtnClick)
         selectDifferentDatesBtn.pack(fill=tk.Y, padx=8, pady=8, expand=0, side=tk.LEFT)
 
         settingsMenu = tk.Button(optionsFrame, text="Settings", command=window.settingsMenuClick)

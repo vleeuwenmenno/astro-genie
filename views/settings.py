@@ -1,4 +1,3 @@
-import json
 from tkinter import Tk
 import tkinter as tk
 
@@ -13,16 +12,24 @@ class SettingsWindow(Tk):
         self.eval('tk::PlaceWindow . center')
 
         self.title("AstroGenie - Settings")
-        self.geometry("340x400")
+        self.geometry("920x200")
         self.iconbitmap("assets/icon.ico") # type: ignore
         
-        self.dateFormat = tk.StringVar()
-        self.badImagePrefix = tk.StringVar()
+        self.settings = Settings()
+        self.settings.loadJson()
+
+        self.dateFormat = tk.StringVar(self)
+        self.badImagePrefix = tk.StringVar(self)
+        self.defaultImageFolder = tk.StringVar(self)
+        self.updateDefaultImageFolderOnLoad = tk.BooleanVar(self)
+
+        self.dateFormat.set(self.settings.dateFormat)
+        self.badImagePrefix.set(self.settings.badImagePrefix)
+        self.defaultImageFolder.set(self.settings.defaultImageFolder)
+        self.updateDefaultImageFolderOnLoad.set(self.settings.updateDefaultImageFolderOnLoad)
         
         self.defineSettingsWidgets()
 
-        self.settings = Settings()
-        self.loadSettingsJson()
 
     def defineSettingsWidgets(self):
         self.defineSettingsFrame()
@@ -31,7 +38,7 @@ class SettingsWindow(Tk):
         self.defineSettingsButtons()
 
     def defineSettingsFrame(self):
-        self.settingsFrame = tk.Frame(self)
+        self.settingsFrame = tk.LabelFrame(self, text="Settings", padx=8, pady=8)
         self.settingsFrame.pack()
 
     def defineSettingsLabels(self):
@@ -41,32 +48,48 @@ class SettingsWindow(Tk):
         self.badImagePrefixLabel = tk.Label(self.settingsFrame, text="Bad Image Prefix: ")
         self.badImagePrefixLabel.grid(row=1, column=0, sticky="E")
 
+        self.defaultImageFolderLabel = tk.Label(self.settingsFrame, text="Default Image Folder:")
+        self.defaultImageFolderLabel.grid(row=2, column=0, sticky="E")
+
+        self.updateDefaultImageFolderOnLoadLabel = tk.Label(self.settingsFrame, text="Update Default Image Folder when browsing:")
+        self.updateDefaultImageFolderOnLoadLabel.grid(row=3, column=0, sticky="E")
+
     def defineSettingsEntries(self):
-        self.dateFormatEntry = tk.Entry(self.settingsFrame, textvariable=self.dateFormat)
+        self.dateFormatEntry = tk.Entry(self.settingsFrame, textvariable=self.dateFormat, width=50)
         self.dateFormatEntry.grid(row=0, column=1)
 
-        self.badImagePrefixEntry = tk.Entry(self.settingsFrame, textvariable=self.badImagePrefix)
+        self.badImagePrefixEntry = tk.Entry(self.settingsFrame, textvariable=self.badImagePrefix, width=50)
         self.badImagePrefixEntry.grid(row=1, column=1)
 
+        self.defaultImageFolderEntry = tk.Entry(self.settingsFrame, textvariable=self.defaultImageFolder, width=50)
+        self.defaultImageFolderEntry.grid(row=2, column=1)
+
+        self.updateDefaultImageFolderOnLoadCheckbutton = tk.Checkbutton(self.settingsFrame, variable=self.updateDefaultImageFolderOnLoad)
+        self.updateDefaultImageFolderOnLoadCheckbutton.grid(row=3, column=1)
+
+        # Add hover tooltip to date format entry to explain how to format the date
+
+
     def defineSettingsButtons(self):
-        self.saveSettingsButton = tk.Button(self.settingsFrame, text="Save", command=self.saveSettingsJson)
-        self.saveSettingsButton.grid(row=2, column=0, sticky="E")
+        # Browse button for default image folder
+        self.browseButton = tk.Button(self.settingsFrame, text="Browse", command=lambda: self.defaultImageFolder.set(tk.filedialog.askdirectory()))
+        self.browseButton.grid(row=2, column=2, padx=5)
 
-        self.cancelSettingsButton = tk.Button(self.settingsFrame, text="Cancel", command=self.destroy)
-        self.cancelSettingsButton.grid(row=2, column=1, sticky="W")
+        self.buttonsFrame = tk.Frame(self.settingsFrame)
 
-    def loadSettingsJson(self):
-        # Load from settings class
-        self.settings.loadJson()
-
-        # Set the settings variables
-        self.dateFormat.set(self.settings.dateFormat)
-        self.badImagePrefix.set(self.settings.badImagePrefix)
+        self.cancelSettingsButton = tk.Button(self.buttonsFrame, text="Cancel", command=self.destroy)
+        self.saveSettingsButton = tk.Button(self.buttonsFrame, text="Save & Close", command=lambda: [self.saveSettingsJson(), self.destroy()])
+       
+        # Grid aligned buttons to the bottom of the window
+        self.buttonsFrame.grid(row=4, column=0, columnspan=2, sticky="E")
+        self.cancelSettingsButton.grid(row=0, column=0, padx=5)
+        self.saveSettingsButton.grid(row=0, column=1, padx=5)
 
     def saveSettingsJson(self):
         # Set the settings variables
         self.settings.dateFormat = self.dateFormat.get()
         self.settings.badImagePrefix = self.badImagePrefix.get()
+        self.settings.defaultImageFolder = self.defaultImageFolder.get()
 
         # Save to settings class
         self.settings.saveJson()

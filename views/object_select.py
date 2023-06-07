@@ -1,5 +1,6 @@
 from tkinter import Tk
 import tkinter as tk
+from utils.settings import Settings
 
 from widgets.folder_select_widget import FolderSelector
 from widgets.object_select_widget import ObjectSelector
@@ -11,12 +12,13 @@ class ObjectSelectWindow(Tk):
     def __init__(self):
         super().__init__()
 
-        # Window can spawn at the center of the screen
+        # Window can spawn at the center of parent window
         self.eval('tk::PlaceWindow . center')
 
         self.title("AstroGenie - Select object")
         self.geometry("600x400")
         self.iconbitmap("assets/icon.ico") # type: ignore
+        self.resizable(False, False)
 
 
         # Define widgets
@@ -34,6 +36,9 @@ class ObjectSelectWindow(Tk):
         # Pack buttons
         self.settingsButton.pack(side=tk.LEFT, pady=10)
         self.proceedBtn.pack(side=tk.RIGHT, padx=10)
+
+        self.settings = Settings()
+        self.settings.loadJson()
         
         # Let's try load the last used folder
         self.tryLoadFolderHistory()
@@ -53,20 +58,19 @@ class ObjectSelectWindow(Tk):
 
     def tryLoadFolderHistory(self):
         try:
-            with open("last_used_folder.txt", "r") as f:
-                self.folderSelectWidget.selectedPath.set(f.read())
-
+            self.folderSelectWidget.selectedPath.set(self.settings.defaultImageFolder)
             self.objectList.populateObjectList(self.folderSelectWidget.selectedPath.get())
         except FileNotFoundError:
             pass
 
     def setFolderCallback(self, folderPath:str):
         self.objectList.populateObjectList(folderPath)
-        self.saveFolderHistory()
+
+        if self.settings.updateDefaultImageFolderOnLoad:
+            self.saveFolderHistory()
         pass
 
     def saveFolderHistory(self):
-        with open("last_used_folder.txt", "w") as f:
-            f.write(self.folderSelectWidget.selectedPath.get())
-            f.close()
+        self.settings.defaultImageFolder = self.folderSelectWidget.selectedPath.get()
+        self.settings.saveJson()
         pass
